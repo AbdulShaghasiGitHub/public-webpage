@@ -1,0 +1,60 @@
+- name: Deploy Application
+  hosts: all
+  tasks:
+    - name: Ensure image is upto date
+      become: yes
+      shell: |
+          sudo yum update -y
+    - name: Ensure php and mysql is installed
+      become: yes
+      shell: |
+          sudo yum install -y httpd24 php56 php56-mysqlnd
+    - name: Ensure Apache is running even at reboot
+      become: yes
+      shell: |
+          sudo service httpd start
+          sudo chkconfig httpd on
+    - name: Ensure mysql is installed
+      become: yes
+      shell: |
+          sudo yum install -y mysql
+    - name: Copy file to remote ec2
+      become: yes
+      copy:
+        src: ./app.zip
+        dest: /home/ec2-user
+        owner: root
+        group: root
+        mode: '0755'
+    - name: Unzip app and move all files to /var/www/html/
+      become: yes
+      shell: |
+          cd /home/ec2-user
+          unzip app.zip
+          rm -rf app.zip
+          rm -rf /var/www/html/*
+          mv app/* /var/www/html/
+          sudo rm -rf ~/app
+    - name: Copy file with owner and permissions
+      become: yes
+      copy:
+        src: ./templates/db.sql.tpl
+        dest: ~/db.sql
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Create db and tables
+      become: yes
+      shell: |
+          mysql -h cloud-db.cxifj6rk0fai.us-east-1.rds.amazonaws.com -P 3306 -u root --password="password" < ~/db.sql
+    - name: Add www group and add ec2 user to www group
+      become: yes
+      shell: |
+          sudo groupadd www
+          sudo usermod -a -G www ec2-user
+    
+
+    
+
+
+
